@@ -1,11 +1,10 @@
 // ==UserScript==
-// @name         Viggo Element Table Parser (PyScript + BeautifulSoup4)
+// @name         Viggo Element Table -> Excel (PyScript + BeautifulSoup4)
 // @namespace    http://tampermonkey.net/
-// @version      2.0
-// @description  Uses PyScript/Pyodide to run BeautifulSoup4 in-browser for parsing Viggo's div-based element tables
+// @version      3.0
+// @description  Parses Viggo's element tables and downloads as Excel (.xlsx) file
 // @match        https://eeskole.viggo.dk/SchedulePlanning/*
 // @match        https://*.viggo.dk/SchedulePlanning/*
-// @grant        GM_setClipboard
 // @grant        GM_registerMenuCommand
 // ==/UserScript==
 
@@ -31,101 +30,8 @@
     await pyodideInstance.loadPackage('micropip');
     const micropip = pyodideInstance.pyimport('micropip');
     await micropip.install('beautifulsoup4');
+    await micropip.install('openpyxl');
     return pyodideInstance;
-  }
-
-  async function parseViggoTable() {
-    const pyodide = await ensurePyodide();
-    pyodide.globals.set('page_html', document.documentElement.outerHTML);
-
-    const result = pyodide.runPython(`
-import json
-from bs4 import BeautifulSoup
-
-soup = BeautifulSoup(page_html, 'html.parser')
-
-# Find the element list: ul.list-icons.list-elements
-table = soup.select_one('ul.list-icons.list-elements')
-rows = []
-
-if table:
-    for li in table.select(':scope > li'):
-        # Skip header row
-        if 'h' in li.get('class', []):
-            continue
-
-        row_div = li.select_one(':scope > div')
-        if not row_div:
-            continue
-
-        # Name: from div.name > a (first text node, not the .hint span)
-        name_el = li.select_one('div.name a.ajaxModal')
-        name = ''
-        if name_el:
-            # Get direct text content, excluding child elements like span.hint
-            for child in name_el.children:
-                if isinstance(child, str):
-                    name += child
-            name = name.strip()
-
-        # Length (hours): from div.length
-        length_el = li.select_one('div.length')
-        length = ''
-        if length_el:
-            # Get text without the <small> tag content appended weirdly
-            texts = []
-            for child in length_el.children:
-                if isinstance(child, str):
-                    texts.append(child.strip())
-                elif child.name == 'small':
-                    texts.append(child.get_text(strip=True))
-            length = ''.join(texts)
-
-        # Preparation: from p.muted.preparation
-        prep_el = li.select_one('p.muted.preparation')
-        preparation = prep_el.get_text(strip=True) if prep_el else ''
-
-        # Teachers: from div.teachers ul.list-icons li > p
-        teacher_els = li.select('div.teachers ul.list-icons li p')
-        teachers = [t.get_text(strip=True) for t in teacher_els]
-
-        # Exceptions count
-        exc_btn = li.select_one('a.exception-button')
-        exceptions = ''
-        if exc_btn:
-            label = exc_btn.select_one('label')
-            if label:
-                exceptions = label.get_text(strip=True)
-
-        rows.append({
-            'Navn': name,
-            'Længde': length,
-            'Forberedelse': preparation,
-            'Undervisere': ', '.join(teachers),
-            'Undtagelser': exceptions,
-        })
-
-json.dumps(rows, ensure_ascii=False)
-    `);
-
-    return JSON.parse(result);
-  }
-
-  function toCSV(rows) {
-    if (rows.length === 0) return '';
-    const headers = Object.keys(rows[0]);
-    const escape = (val) => {
-      val = String(val);
-      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-        return `"${val.replace(/"/g, '""')}"`;
-      }
-      return val;
-    };
-    const lines = [headers.map(escape).join(',')];
-    for (const row of rows) {
-      lines.push(headers.map((h) => escape(row[h])).join(','));
-    }
-    return lines.join('\n');
   }
 
   function showStatus(msg, duration = 3000) {
@@ -141,35 +47,168 @@ json.dumps(rows, ensure_ascii=False)
     setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, duration);
   }
 
-  GM_registerMenuCommand('Viggo -> Console', async () => {
-    showStatus('Indlæser Pyodide + BeautifulSoup4...');
+  GM_registerMenuCommand('Viggo -> Download Excel', async () => {
+    showStatus('Indlæser Pyodide + BeautifulSoup4 + openpyxl...');
     try {
-      const rows = await parseViggoTable();
-      if (rows.length === 0) { alert('Ingen elementer fundet.'); return; }
-      console.table(rows);
-      showStatus(`${rows.length} elementer logget til konsollen (F12)`);
-    } catch (e) { console.error(e); alert('Fejl: ' + e.message); }
-  });
+      const pyodide = await ensurePyodide();
+      pyodide.globals.set('page_html', document.documentElement.outerHTML);
 
-  GM_registerMenuCommand('Viggo -> CSV (clipboard)', async () => {
-    showStatus('Indlæser Pyodide + BeautifulSoup4...');
-    try {
-      const rows = await parseViggoTable();
-      if (rows.length === 0) { alert('Ingen elementer fundet.'); return; }
-      GM_setClipboard(toCSV(rows), 'text');
-      showStatus(`CSV med ${rows.length} elementer kopieret til clipboard`);
-    } catch (e) { console.error(e); alert('Fejl: ' + e.message); }
-  });
+      const xlsxBase64 = pyodide.runPython(`
+import json
+import base64
+from io import BytesIO
+from bs4 import BeautifulSoup
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-  GM_registerMenuCommand('Viggo -> JSON (clipboard)', async () => {
-    showStatus('Indlæser Pyodide + BeautifulSoup4...');
-    try {
-      const rows = await parseViggoTable();
-      if (rows.length === 0) { alert('Ingen elementer fundet.'); return; }
-      GM_setClipboard(JSON.stringify(rows, null, 2), 'text');
-      showStatus(`JSON med ${rows.length} elementer kopieret til clipboard`);
-    } catch (e) { console.error(e); alert('Fejl: ' + e.message); }
-  });
+soup = BeautifulSoup(page_html, 'html.parser')
 
-  unsafeWindow.__viggoParser = { parseViggoTable, toCSV };
+# Get folder name from breadcrumbs
+folder_name = 'Elementer'
+breadcrumb = soup.select_one('.breadcrumbs span')
+if breadcrumb:
+    folder_name = breadcrumb.get_text(strip=True)
+
+# Find the element list
+table = soup.select_one('ul.list-icons.list-elements')
+rows = []
+
+if table:
+    for li in table.select(':scope > li'):
+        if 'h' in li.get('class', []):
+            continue
+        row_div = li.select_one(':scope > div')
+        if not row_div:
+            continue
+
+        # Name
+        name_el = li.select_one('div.name a.ajaxModal')
+        name = ''
+        if name_el:
+            for child in name_el.children:
+                if isinstance(child, str):
+                    name += child
+            name = name.strip()
+
+        # Length
+        length_el = li.select_one('div.length')
+        length_val = 0.0
+        if length_el:
+            text = ''
+            for child in length_el.children:
+                if isinstance(child, str):
+                    text += child.strip()
+            text = text.replace(',', '.')
+            try:
+                length_val = float(text)
+            except ValueError:
+                length_val = 0.0
+
+        # Preparation
+        prep_el = li.select_one('p.muted.preparation')
+        preparation = prep_el.get_text(strip=True) if prep_el else ''
+
+        # Teachers
+        teacher_els = li.select('div.teachers ul.list-icons li p')
+        teachers = ', '.join([t.get_text(strip=True) for t in teacher_els])
+
+        # Exceptions count
+        exc_btn = li.select_one('a.exception-button')
+        exceptions = 0
+        if exc_btn:
+            label = exc_btn.select_one('label')
+            if label:
+                try:
+                    exceptions = int(label.get_text(strip=True))
+                except ValueError:
+                    exceptions = 0
+
+        rows.append([name, length_val, preparation, teachers, exceptions])
+
+# Create Excel workbook
+wb = Workbook()
+ws = wb.active
+ws.title = folder_name[:31]  # Excel sheet name max 31 chars
+
+# Styles
+header_font = Font(bold=True, color='FFFFFF', size=11)
+header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+header_alignment = Alignment(horizontal='center', vertical='center')
+thin_border = Border(
+    left=Side(style='thin', color='D9D9D9'),
+    right=Side(style='thin', color='D9D9D9'),
+    top=Side(style='thin', color='D9D9D9'),
+    bottom=Side(style='thin', color='D9D9D9'),
+)
+
+# Headers
+headers = ['Navn', 'Timer', 'Forberedelse', 'Undervisere', 'Undtagelser']
+for col, header in enumerate(headers, 1):
+    cell = ws.cell(row=1, column=col, value=header)
+    cell.font = header_font
+    cell.fill = header_fill
+    cell.alignment = header_alignment
+    cell.border = thin_border
+
+# Data rows
+for row_idx, row_data in enumerate(rows, 2):
+    for col_idx, value in enumerate(row_data, 1):
+        cell = ws.cell(row=row_idx, column=col_idx, value=value)
+        cell.border = thin_border
+        if col_idx == 2:  # Timer column - number format
+            cell.number_format = '0.00'
+        if col_idx == 5:  # Undtagelser - center
+            cell.alignment = Alignment(horizontal='center')
+
+# Auto-width columns
+for col in ws.columns:
+    max_length = 0
+    col_letter = col[0].column_letter
+    for cell in col:
+        if cell.value:
+            max_length = max(max_length, len(str(cell.value)))
+    ws.column_dimensions[col_letter].width = min(max_length + 4, 60)
+
+# Sum row
+sum_row = len(rows) + 2
+ws.cell(row=sum_row, column=1, value='Total').font = Font(bold=True)
+ws.cell(row=sum_row, column=2, value=f'=SUM(B2:B{sum_row-1})').font = Font(bold=True)
+ws.cell(row=sum_row, column=2).number_format = '0.00'
+
+# Freeze header row
+ws.freeze_panes = 'A2'
+
+# Auto-filter
+ws.auto_filter.ref = f'A1:E{sum_row - 1}'
+
+# Save to bytes
+buffer = BytesIO()
+wb.save(buffer)
+base64.b64encode(buffer.getvalue()).decode('ascii')
+      `);
+
+      // Download the file
+      const byteChars = atob(xlsxBase64);
+      const byteArray = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteArray[i] = byteChars.charCodeAt(i);
+      }
+      const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+      const folderName = document.querySelector('.breadcrumbs span')?.textContent?.trim() || 'Elementer';
+      const date = new Date().toISOString().slice(0, 10);
+      const filename = `${folderName}_${date}.xlsx`;
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+
+      showStatus(`${filename} downloadet!`);
+    } catch (e) {
+      console.error(e);
+      alert('Fejl: ' + e.message);
+    }
+  });
 })();
