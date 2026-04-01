@@ -3,7 +3,8 @@
 // @namespace    http://tampermonkey.net/
 // @version      2.0
 // @description  Uses PyScript/Pyodide to run BeautifulSoup4 in-browser for parsing Viggo's div-based element tables
-// @match        *://*/*SchedulePlanning/SetupElement*
+// @match        https://eeskole.viggo.dk/SchedulePlanning/*
+// @match        https://*.viggo.dk/SchedulePlanning/*
 // @grant        GM_setClipboard
 // @grant        GM_registerMenuCommand
 // ==/UserScript==
