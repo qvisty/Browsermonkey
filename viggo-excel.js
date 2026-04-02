@@ -219,24 +219,32 @@ base64.b64encode(buffer.getvalue()).decode('ascii')
     return btn;
   }
 
-  // Insert Excel download buttons into the page
-  function insertButtons() {
-    // Top button: after the folder heading ("Akkorder" etc.)
-    const heading = document.querySelector('#element-details .head h3');
-    if (heading && !heading.parentElement.querySelector('.viggo-excel-btn-top')) {
-      const topBtn = createExcelBtn('viggo-excel-btn-top btn');
-      heading.after(topBtn);
-    }
-
-    // Bottom button: in .button-group.right next to print icon
+  // Bottom button: in .button-group.right next to print icon (original working version)
+  function insertBottomButton() {
     const buttonGroup = document.querySelector('#element-details .button-group.right');
-    if (buttonGroup && !buttonGroup.querySelector('.viggo-excel-btn-bottom')) {
-      buttonGroup.insertBefore(createExcelBtn('viggo-excel-btn-bottom'), buttonGroup.firstChild);
-    }
+    if (!buttonGroup) return;
+    if (buttonGroup.querySelector('.viggo-excel-btn-bottom')) return;
+    buttonGroup.insertBefore(createExcelBtn('viggo-excel-btn-bottom'), buttonGroup.firstChild);
   }
 
-  // Persistent check - handles AJAX navigation within Viggo's SPA
-  setInterval(insertButtons, 1000);
+  // Top button: after the folder heading ("Akkorder" etc.)
+  function insertTopButton() {
+    const heading = document.querySelector('#element-details .head h3');
+    if (!heading) return;
+    if (heading.parentElement.querySelector('.viggo-excel-btn-top')) return;
+    const topBtn = createExcelBtn('viggo-excel-btn-top btn');
+    heading.after(topBtn);
+  }
+
+  // Bottom button - original approach that worked
+  insertBottomButton();
+  new MutationObserver(() => insertBottomButton()).observe(
+    document.querySelector('#element-details') || document.body,
+    { childList: true, subtree: true }
+  );
+
+  // Top button - persistent interval for AJAX/SPA navigation
+  setInterval(insertTopButton, 1000);
 
   // Register menu command (passed from loader)
   if (typeof GM_registerMenuCommand !== 'undefined') {
