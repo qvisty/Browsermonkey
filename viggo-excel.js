@@ -221,11 +221,14 @@ base64.b64encode(buffer.getvalue()).decode('ascii')
 
   // Insert Excel download buttons into the page
   function insertButtons() {
-    // Top button: in the .head .dropdown.right next to "Ny" button
-    const headDropdown = document.querySelector('#element-details > .head > .dropdown.right');
-    if (headDropdown && !headDropdown.querySelector('.viggo-excel-btn-top')) {
-      const topBtn = createExcelBtn('viggo-excel-btn-top btn');
-      headDropdown.insertBefore(topBtn, headDropdown.firstChild);
+    // Top button: in the .head area next to "Ny" and "Hjælp" buttons
+    const head = document.querySelector('#element-details .head');
+    if (head && !head.querySelector('.viggo-excel-btn-top')) {
+      const dropdown = head.querySelector('.dropdown.right');
+      if (dropdown) {
+        const topBtn = createExcelBtn('viggo-excel-btn-top btn');
+        dropdown.insertBefore(topBtn, dropdown.firstChild);
+      }
     }
 
     // Bottom button: in .button-group.right next to print icon
