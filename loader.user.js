@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Viggo Element Table -> Excel
 // @namespace    http://tampermonkey.net/
-// @version      4.1
+// @version      4.2
 // @description  Loader - henter seneste kode fra GitHub ved hver sideindlæsning
-// @match        https://eeskole.viggo.dk/*
-// @match        https://*.viggo.dk/*
+// @match        https://eeskole.viggo.dk/SchedulePlanning/SetupElement*
+// @match        https://*.viggo.dk/SchedulePlanning/SetupElement*
 // @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
 // @connect      raw.githubusercontent.com
