@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Viggo Element Table -> Excel (PyScript + BeautifulSoup4)
 // @namespace    http://tampermonkey.net/
-// @version      3.2
+// @version      3.3
 // @description  Parses Viggo's element tables and downloads as Excel (.xlsx) file
 // @match        https://eeskole.viggo.dk/SchedulePlanning/*
 // @match        https://*.viggo.dk/SchedulePlanning/*
 // @grant        GM_registerMenuCommand
-// @updateURL    https://raw.githubusercontent.com/qvisty/Browsermonkey/claude/tampermonkey-div-table-parser-GIzNB/div-table-parser-pyscript.user.js
-// @downloadURL  https://raw.githubusercontent.com/qvisty/Browsermonkey/claude/tampermonkey-div-table-parser-GIzNB/div-table-parser-pyscript.user.js
+// @updateURL    https://raw.githubusercontent.com/qvisty/Browsermonkey/main/div-table-parser-pyscript.user.js
+// @downloadURL  https://raw.githubusercontent.com/qvisty/Browsermonkey/main/div-table-parser-pyscript.user.js
 // ==/UserScript==
 
 (function () {
