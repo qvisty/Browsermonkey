@@ -238,7 +238,7 @@ base64.b64encode(buffer.getvalue()).decode('ascii')
   // Run on load and observe for AJAX-loaded content
   insertButtons();
   new MutationObserver(() => insertButtons()).observe(
-    document.querySelector('#element-details') || document.body,
+    document.body,
     { childList: true, subtree: true }
   );
 
