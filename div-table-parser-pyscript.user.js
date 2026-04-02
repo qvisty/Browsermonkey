@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Viggo Element Table -> Excel (PyScript + BeautifulSoup4)
 // @namespace    http://tampermonkey.net/
-// @version      3.1
+// @version      3.2
 // @description  Parses Viggo's element tables and downloads as Excel (.xlsx) file
 // @match        https://eeskole.viggo.dk/SchedulePlanning/*
 // @match        https://*.viggo.dk/SchedulePlanning/*
@@ -49,7 +49,7 @@
     setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, duration);
   }
 
-  GM_registerMenuCommand('Viggo -> Download Excel', async () => {
+  async function downloadExcel() {
     showStatus('Indlæser Pyodide + BeautifulSoup4 + openpyxl...');
     try {
       const pyodide = await ensurePyodide();
@@ -212,5 +212,34 @@ base64.b64encode(buffer.getvalue()).decode('ascii')
       console.error(e);
       alert('Fejl: ' + e.message);
     }
-  });
+  }
+
+  // Insert Excel download button into the page
+  function insertButton() {
+    const buttonGroup = document.querySelector('#element-details .button-group.right');
+    if (!buttonGroup) return;
+    if (buttonGroup.querySelector('.viggo-excel-btn')) return;
+
+    const btn = document.createElement('a');
+    btn.href = '#';
+    btn.className = 'viggo-excel-btn';
+    btn.title = 'Download som Excel';
+    btn.innerHTML = '<i class="flaticon-print"></i> Excel';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      downloadExcel();
+    });
+
+    // Insert as first child (before print button)
+    buttonGroup.insertBefore(btn, buttonGroup.firstChild);
+  }
+
+  // Run on load and observe for AJAX-loaded content
+  insertButton();
+  new MutationObserver(() => insertButton()).observe(
+    document.querySelector('#element-details') || document.body,
+    { childList: true, subtree: true }
+  );
+
+  GM_registerMenuCommand('Viggo -> Download Excel', downloadExcel);
 })();
