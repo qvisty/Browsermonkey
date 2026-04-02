@@ -1,14 +1,5 @@
-// ==UserScript==
-// @name         Viggo Element Table -> Excel (PyScript + BeautifulSoup4)
-// @namespace    http://tampermonkey.net/
-// @version      3.3
-// @description  Parses Viggo's element tables and downloads as Excel (.xlsx) file
-// @match        https://eeskole.viggo.dk/SchedulePlanning/*
-// @match        https://*.viggo.dk/SchedulePlanning/*
-// @grant        GM_registerMenuCommand
-// @updateURL    https://raw.githubusercontent.com/qvisty/Browsermonkey/main/div-table-parser-pyscript.user.js
-// @downloadURL  https://raw.githubusercontent.com/qvisty/Browsermonkey/main/div-table-parser-pyscript.user.js
-// ==/UserScript==
+// Viggo Element Table -> Excel
+// Denne fil hentes automatisk af loader.user.js fra GitHub
 
 (function () {
   'use strict';
@@ -230,7 +221,6 @@ base64.b64encode(buffer.getvalue()).decode('ascii')
       downloadExcel();
     });
 
-    // Insert as first child (before print button)
     buttonGroup.insertBefore(btn, buttonGroup.firstChild);
   }
 
@@ -241,5 +231,8 @@ base64.b64encode(buffer.getvalue()).decode('ascii')
     { childList: true, subtree: true }
   );
 
-  GM_registerMenuCommand('Viggo -> Download Excel', downloadExcel);
+  // Register menu command (passed from loader)
+  if (typeof GM_registerMenuCommand !== 'undefined') {
+    GM_registerMenuCommand('Viggo -> Download Excel', downloadExcel);
+  }
 })();
