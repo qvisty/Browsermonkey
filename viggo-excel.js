@@ -235,20 +235,8 @@ base64.b64encode(buffer.getvalue()).decode('ascii')
     }
   }
 
-  // Run on load, retry a few times for late-loading content, and observe for AJAX
-  insertButtons();
-  const retryInterval = setInterval(() => {
-    insertButtons();
-    if (document.querySelector('.viggo-excel-btn-top') && document.querySelector('.viggo-excel-btn-bottom')) {
-      clearInterval(retryInterval);
-    }
-  }, 500);
-  setTimeout(() => clearInterval(retryInterval), 10000);
-
-  new MutationObserver(() => insertButtons()).observe(
-    document.body,
-    { childList: true, subtree: true }
-  );
+  // Persistent check - handles AJAX navigation within Viggo's SPA
+  setInterval(insertButtons, 1000);
 
   // Register menu command (passed from loader)
   if (typeof GM_registerMenuCommand !== 'undefined') {
