@@ -205,28 +205,39 @@ base64.b64encode(buffer.getvalue()).decode('ascii')
     }
   }
 
-  // Insert Excel download button into the page
-  function insertButton() {
-    const buttonGroup = document.querySelector('#element-details .button-group.right');
-    if (!buttonGroup) return;
-    if (buttonGroup.querySelector('.viggo-excel-btn')) return;
-
+  // Create a styled Excel button
+  function createExcelBtn(className) {
     const btn = document.createElement('a');
     btn.href = '#';
-    btn.className = 'viggo-excel-btn';
+    btn.className = className;
     btn.title = 'Download som Excel';
     btn.innerHTML = '<i class="flaticon-print"></i> Excel';
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       downloadExcel();
     });
+    return btn;
+  }
 
-    buttonGroup.insertBefore(btn, buttonGroup.firstChild);
+  // Insert Excel download buttons into the page
+  function insertButtons() {
+    // Top button: in the .head .dropdown.right next to "Ny" button
+    const headDropdown = document.querySelector('#element-details > .head > .dropdown.right');
+    if (headDropdown && !headDropdown.querySelector('.viggo-excel-btn-top')) {
+      const topBtn = createExcelBtn('viggo-excel-btn-top btn');
+      headDropdown.insertBefore(topBtn, headDropdown.firstChild);
+    }
+
+    // Bottom button: in .button-group.right next to print icon
+    const buttonGroup = document.querySelector('#element-details .button-group.right');
+    if (buttonGroup && !buttonGroup.querySelector('.viggo-excel-btn-bottom')) {
+      buttonGroup.insertBefore(createExcelBtn('viggo-excel-btn-bottom'), buttonGroup.firstChild);
+    }
   }
 
   // Run on load and observe for AJAX-loaded content
-  insertButton();
-  new MutationObserver(() => insertButton()).observe(
+  insertButtons();
+  new MutationObserver(() => insertButtons()).observe(
     document.querySelector('#element-details') || document.body,
     { childList: true, subtree: true }
   );
